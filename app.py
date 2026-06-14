@@ -2,12 +2,15 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
 from datetime import datetime
+import os
 
 app = Flask(__name__)
 CORS(app)
 
+DB_PATH = 'results.db'
+
 def init_db():
-    conn = sqlite3.connect('results.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS results (
@@ -21,10 +24,14 @@ def init_db():
     conn.commit()
     conn.close()
 
+@app.route('/')
+def home():
+    return jsonify({'status': 'NUET Prep API running'})
+
 @app.route('/submit', methods=['POST'])
 def submit():
     data = request.json
-    conn = sqlite3.connect('results.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('INSERT INTO results (name, score, total, date) VALUES (?, ?, ?, ?)',
               (data['name'], data['score'], data['total'], datetime.now().strftime('%Y-%m-%d %H:%M')))
@@ -34,13 +41,15 @@ def submit():
 
 @app.route('/results', methods=['GET'])
 def get_results():
-    conn = sqlite3.connect('results.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT * FROM results ORDER BY date DESC')
     rows = c.fetchall()
     conn.close()
     return jsonify(rows)
 
-if __name__ == '__main__':
+with app.app_context():
     init_db()
+
+if __name__ == '__main__':
     app.run(debug=True)
